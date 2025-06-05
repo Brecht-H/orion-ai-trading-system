@@ -14,7 +14,17 @@
     "type": "enterprise_trading_platform",
     "language": "python",
     "framework": "multi_module_ai_system",
-    "repository": "https://github.com/Brecht-H/orion-ai-trading-system.git"
+    "repository": "https://github.com/Brecht-H/orion-ai-trading-system.git",
+    "github": {
+      "owner": "Brecht-H",
+      "repo": "orion-ai-trading-system",
+      "branch": "main"
+    }
+  },
+  "environment": {
+    "python_version": "3.11.13",
+    "python_path": "/opt/homebrew/bin/python3.11",
+    "working_directory": "/Users/allaerthartjes/Orion_Project"
   },
   "constraints": {
     "never_modify": [
