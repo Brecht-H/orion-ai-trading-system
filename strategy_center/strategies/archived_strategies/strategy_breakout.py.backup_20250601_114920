@@ -1,0 +1,52 @@
+import os
+import logging
+import random
+from logging_utils import log_trade, analyze_position, save_feedback
+
+strategy_name = os.path.basename(__file__)
+symbol = "ETH/USDT"
+position = None
+
+def initialize_strategy():
+    logging.basicConfig(level=logging.INFO)
+    logging.info(f"🚀 Strategie {strategy_name} initialiseren (Breakout)")
+
+def should_buy(close, high_20):
+    return close > high_20
+
+def should_sell(close, low_20):
+    return close < low_20
+
+def analyze_market():
+    # Simuleer prijs en high/low 20
+    close = round(random.uniform(25000, 52000), 2)
+    high_20 = close - random.uniform(-500, 500)
+    low_20 = close - random.uniform(0, 1000)
+    feedback = ""
+    if should_buy(close, high_20):
+        actie = "BUY"
+        feedback = f"Breakout: Slotkoers {close} is boven high_20 ({high_20:.2f}), koopmoment."
+    elif should_sell(close, low_20):
+        actie = "SELL"
+        feedback = f"Breakout: Slotkoers {close} is onder low_20 ({low_20:.2f}), verkoopmoment."
+    else:
+        actie = random.choice(["BUY", "SELL"])
+        feedback = f"Breakout: Slotkoers {close} binnen range, geen duidelijk signaal."
+    winst = round(random.uniform(-200, 250), 2)
+    return {
+        "actie": actie,
+        "prijs": close,
+        "winst": winst,
+        "feedback": feedback
+    }
+
+def log_feedback(strategy_name, feedback):
+    save_feedback(strategy_name, feedback)
+
+def run_strategy():
+    initialize_strategy()
+    result = analyze_market()
+    logging.info(f"🚀 Breakout trade: {result['actie']} @ ${result['prijs']} | Resultaat: {result['winst']}")
+    log_trade(strategy_name, result['actie'], result['prijs'], result['winst'])
+    analyze_position(symbol=symbol, price=result['prijs'], position=position, strategy=strategy_name)
+    log_feedback(strategy_name, result['feedback'])

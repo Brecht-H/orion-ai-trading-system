@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Orion CEO Command Dashboard v7</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1d3a 50%, #2d1b69 100%);
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* CNN-Style News Ticker */
+        .news-ticker {
+            background: linear-gradient(90deg, #00f5ff, #ff6b35);
+            padding: 8px 0;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+            z-index: 1000;
+        }
+
+        .ticker-content {
+            display: inline-block;
+            animation: scroll-left 60s linear infinite;
+            color: white;
+            font-weight: bold;
+        }
+
+        .ticker-item {
+            margin-right: 50px;
+            display: inline;
+        }
+
+        @keyframes scroll-left {
+            from { transform: translateX(100vw); }
+            to { transform: translateX(-100%); }
+        }
+
+        /* Main Layout */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            height: calc(100vh - 40px);
+        }
+
+        /* Compact Sidebar */
+        .sidebar {
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo h1 {
+            font-size: 18px;
+            background: linear-gradient(45deg, #00f5ff, #ff6b35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: linear-gradient(45deg, #00f5ff, #ff6b35);
+            transform: translateX(3px);
+        }
+
+        .nav-link i {
+            margin-right: 8px;
+            width: 16px;
+        }
+
+        /* Main Content - No Scrolling */
+        .main-content {
+            padding: 15px;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Executive Header - Compact */
+        .executive-header {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .exec-metric {
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.15), rgba(255, 107, 53, 0.15));
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .exec-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00f5ff;
+            margin-bottom: 2px;
+        }
+
+        .exec-label {
+            font-size: 10px;
+            opacity: 0.8;
+            text-transform: uppercase;
+        }
+
+        /* Main Dashboard Grid - CEO Optimized */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            flex: 1;
+            height: calc(100vh - 180px);
+        }
+
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 245, 255, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            min-height: 25px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* CEO Visual Best Practices */
+        .chart-container {
+            position: relative;
+            height: 140px;
+            flex: 1;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .status-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .status-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #00f5ff;
+        }
+
+        .status-label {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        /* Action Items - Compact */
+        .action-list {
+            max-height: 200px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .action-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            border-left: 3px solid transparent;
+            font-size: 11px;
+        }
+
+        .action-item.complete { border-left-color: #4CAF50; }
+        .action-item.in-progress { border-left-color: #FF9800; }
+        .action-item.wait { border-left-color: #FFC107; }
+        .action-item.blocked { border-left-color: #f44336; }
+
+        .action-status {
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .status-complete { background: #4CAF50; }
+        .status-progress { background: #FF9800; }
+        .status-wait { background: #FFC107; color: #000; }
+        .status-blocked { background: #f44336; }
+
+        /* Alert System - Compact */
+        .alert-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .alert-high { background: rgba(244, 67, 54, 0.2); border-left: 3px solid #f44336; }
+        .alert-medium { background: rgba(255, 152, 0, 0.2); border-left: 3px solid #FF9800; }
+        .alert-low { background: rgba(76, 175, 80, 0.2); border-left: 3px solid #4CAF50; }
+
+        /* Progress Bars - CEO Style */
+        .progress-container {
+            margin: 6px 0;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-size: 11px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f5ff, #ff6b35);
+            border-radius: 3px;
+            transition: width 1s ease;
+        }
+
+        /* Tab System */
+        .tab-container {
+            display: none;
+            height: 100%;
+        }
+
+        .tab-container.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Refresh Button */
+        .refresh-btn {
+            background: linear-gradient(45deg, #00f5ff, #ff6b35);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        /* Big Screen Optimization */
+        @media (min-width: 1920px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(6, 1fr);
+                gap: 10px;
+            }
+            .executive-header {
+                grid-template-columns: repeat(8, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- CNN-Style News Ticker -->
+    <div class="news-ticker">
+        <div class="ticker-content">
+            <span class="ticker-item">🚀 Orion Project: All Systems Operational</span>
+            <span class="ticker-item">📊 Portfolio: +12.3% (DEMO DATA - Set Your Real Starting Amount)</span>
+            <span class="ticker-item">🔒 Security: API Key Rotation Ready</span>
+            <span class="ticker-item">🎯 Actions: 35 tracked, 8 completed</span>
+            <span class="ticker-item">⚡ Trading: 3 positions, 74% win rate</span>
+            <span class="ticker-item">🧠 AI: 85% confidence</span>
+            <span class="ticker-item">📈 Risk Level: 2.3% (Low)</span>
+            <span class="ticker-item">🌐 Data Sources: 15 active</span>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Compact Sidebar -->
+        <nav class="sidebar">
+            <div class="logo">
+                <h1>🚀 ORION</h1>
+                <p style="font-size: 10px;">CEO Command</p>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-tab="overview">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Overview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="trading">
+                        <i class="fas fa-chart-line"></i>
+                        Trading
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="actions">
+                        <i class="fas fa-tasks"></i>
+                        Actions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="risk">
+                        <i class="fas fa-shield-alt"></i>
+                        Risk
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="research">
+                        <i class="fas fa-microscope"></i>
+                        Research
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="knowledge">
+                        <i class="fas fa-brain"></i>
+                        Knowledge
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Executive Header - CEO KPIs -->
+            <div class="executive-header">
+                <div class="exec-metric">
+                    <div class="exec-value" id="total-pnl">$12,340</div>
+                    <div class="exec-label">Total P&L</div>
+                </div>
+                <div class="exec-metric">
+                    <div class="exec-value" id="portfolio-value">$125,847</div>
+                    <div class="exec-label">Portfolio</div>
+                </div>
+                <div class="exec-metric">
+                    <div class="exec-value" id="win-rate">74%</div>
+                    <div class="exec-label">Win Rate</div>
+                </div>
+                <div class="exec-metric">
+                    <div class="exec-value" id="active-positions">3</div>
+                    <div class="exec-label">Positions</div>
+                </div>
+                <div class="exec-metric">
+                    <div class="exec-value" id="system-health">98%</div>
+                    <div class="exec-label">Health</div>
+                </div>
+                <div class="exec-metric">
+                    <div class="exec-value" id="risk-level">2.3%</div>
+                    <div class="exec-label">Risk</div>
+                </div>
+            </div>
+
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-container active">
+                <div class="dashboard-grid">
+                    <!-- Portfolio Performance Chart -->
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">📊 Portfolio Performance</h3>
+                            <button class="refresh-btn">↻</button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="portfolioChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- System Status -->
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">🔧 System Health</h3>
+                        </div>
+                        <div class="status-grid">
+                            <div class="status-item">
+                                <div class="status-value">98%</div>
+                                <div class="status-label">Research</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-value">95%</div>
+                                <div class="status-label">Trading</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-value">100%</div>
+                                <div class="status-label">Risk Mgmt</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-value">92%</div>
+                                <div class="status-label">Knowledge</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">⚡ Quick Actions</h3>
+                        </div>
+                        <div class="action-list">
+                            <div class="action-item wait">
+                                <span>API Key Rotation</span>
+                                <span class="action-status status-wait">Wait</span>
+                            </div>
+                            <div class="action-item in-progress">
+                                <span>CI/CD Pipeline</span>
+                                <span class="action-status status-progress">Progress</span>
+                            </div>
+                            <div class="action-item complete">
+                                <span>Risk Management</span>
+                                <span class="action-status status-complete">Done</span>
+                            </div>
+                            <div class="action-item wait">
+                                <span>DeFiPulse API</span>
+                                <span class="action-status status-wait">Wait</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Priority Alerts -->
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">🚨 Alerts</h3>
+                        </div>
+                        <div class="action-list">
+                            <div class="alert-item alert-medium">
+                                <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                                High BTC volatility detected
+                            </div>
+                            <div class="alert-item alert-low">
+                                <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+                                All systems operational
+                            </div>
+                            <div class="alert-item alert-low">
+                                <i class="fas fa-chart-line" style="margin-right: 8px;"></i>
+                                New opportunity identified
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Tab -->
+            <div id="actions" class="tab-container">
+                <div class="dashboard-grid">
+                    <div class="dashboard-card" style="grid-column: 1 / -1;">
+                        <div class="card-header">
+                            <h3 class="card-title">🎯 Fortune Maximization Actions (35 Total)</h3>
+                            <button class="refresh-btn">↻ Sync Notion</button>
+                        </div>
+                        <div class="action-list" style="max-height: 400px;">
+                            <!-- Actions will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other tabs would be similar compact layouts -->
+        </main>
+    </div>
+
+    <script>
+        // Tab Navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                document.querySelectorAll('.tab-container').forEach(t => t.classList.remove('active'));
+                
+                link.classList.add('active');
+                const tabId = link.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+                
+                if (tabId === 'overview') {
+                    initPortfolioChart();
+                }
+            });
+        });
+
+        // Portfolio Chart - CEO Style
+        function initPortfolioChart() {
+            const ctx = document.getElementById('portfolioChart');
+            if (!ctx || ctx.chart) return;
+
+            ctx.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Portfolio (DEMO DATA)',
+                        data: [100000, 105000, 108000, 115000, 122000, 125847],
+                        borderColor: '#00f5ff',
+                        backgroundColor: 'rgba(0, 245, 255, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#ffffff', font: { size: 10 } },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { 
+                                color: '#ffffff', 
+                                font: { size: 10 },
+                                callback: function(value) {
+                                    return '$' + (value/1000) + 'K';
+                                }
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Real-time updates simulation
+        function updateMetrics() {
+            // This would connect to your real data
+            const profit = Math.floor(Math.random() * 5000) + 10000;
+            document.getElementById('total-pnl').textContent = '+$' + profit.toLocaleString();
+            
+            const health = Math.floor(Math.random() * 5) + 95;
+            document.getElementById('system-health').textContent = health + '%';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initPortfolioChart();
+            setInterval(updateMetrics, 5000);
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,6 @@
+{
+  "load_on_demand": true,
+  "unload_after_idle": 300,
+  "max_concurrent_models": 1,
+  "memory_threshold": 0.8
+}

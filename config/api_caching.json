@@ -1,0 +1,10 @@
+{
+  "enable_caching": true,
+  "cache_duration": 3600,
+  "cache_types": [
+    "news",
+    "market_data",
+    "research"
+  ],
+  "max_cache_size": "100MB"
+}

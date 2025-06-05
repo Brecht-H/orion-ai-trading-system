@@ -1,0 +1,32 @@
+{
+  "user": "ubuntu",
+  "install": "./.cursor/install.sh",
+  "start": "echo 'Orion AI Trading Environment Ready' && python --version",
+  "terminals": [
+    {
+      "name": "orion_system_monitor",
+      "command": "python core_orchestration/system_coordinator/system_health_monitor.py",
+      "description": "Monitors overall system health and performance across all Orion centers"
+    },
+    {
+      "name": "data_collector",
+      "command": "python research_center/collectors/data_collector.py --continuous",
+      "description": "Runs continuous data collection from crypto sources, news, and social media"
+    },
+    {
+      "name": "correlation_engine",
+      "command": "python research_center/analyzers/correlation_engine.py --auto-analyze",
+      "description": "Performs continuous correlation analysis for pattern detection"
+    },
+    {
+      "name": "strategy_backtester",
+      "command": "python strategy_center/backtesting/pattern_backtester.py --background",
+      "description": "Background strategy validation and performance testing"
+    },
+    {
+      "name": "week2_test_runner",
+      "command": "python tests/test_week2_enhancements.py --continuous",
+      "description": "Continuous testing of Week 2 enhancements for quality assurance"
+    }
+  ]
+} 

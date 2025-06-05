@@ -1,0 +1,27 @@
+{
+  "CEO_CRITICAL": {
+    "name": "\ud83d\udea8 CEO Critical",
+    "filter": "Priority = Critical",
+    "sort": "Deadline ascending"
+  },
+  "QUICK_WINS": {
+    "name": "\u26a1 Quick Wins",
+    "filter": "Quick Win = Yes AND Status \u2260 Completed",
+    "sort": "Effort ascending"
+  },
+  "HIGH_IMPACT_FREE": {
+    "name": "\ud83d\udcb0 High Impact Free",
+    "filter": "ROI Potential = High AND Cost = Free",
+    "sort": "Priority, Effort"
+  },
+  "THIS_WEEK": {
+    "name": "\ud83d\udcc5 This Week",
+    "filter": "Deadline \u2264 1 week from today",
+    "sort": "Priority descending"
+  },
+  "BY_CATEGORY": {
+    "name": "\ud83d\udcc2 By Category",
+    "group_by": "Category",
+    "filter": "Status \u2260 Completed"
+  }
+}

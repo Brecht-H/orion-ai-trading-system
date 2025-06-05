@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orion CEO Dashboard - $10K Real Tracking</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: rgba(15, 15, 35, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            width: 250px;
+            z-index: 1000;
+        }
+
+        .logo {
+            text-align: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            background: linear-gradient(45deg, #00f5ff, #ff6b35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 20px;
+        }
+
+        .nav-item {
+            margin-bottom: 5px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: linear-gradient(45deg, rgba(0, 245, 255, 0.2), rgba(255, 107, 53, 0.2));
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .nav-link i {
+            margin-right: 12px;
+            width: 20px;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        /* News Ticker */
+        .news-ticker {
+            background: linear-gradient(90deg, #00f5ff, #ff6b35);
+            padding: 10px 0;
+            margin-bottom: 20px;
+            overflow: hidden;
+            white-space: nowrap;
+            border-radius: 8px;
+        }
+
+        .ticker-content {
+            display: inline-block;
+            animation: scroll-left 60s linear infinite;
+            color: white;
+            font-weight: bold;
+        }
+
+        .ticker-item {
+            margin-right: 50px;
+            display: inline;
+        }
+
+        @keyframes scroll-left {
+            from { transform: translateX(100vw); }
+            to { transform: translateX(-100%); }
+        }
+
+        /* Header */
+        .dashboard-header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00f5ff;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.7;
+            text-transform: uppercase;
+        }
+
+        /* KPI Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00f5ff;
+            margin-bottom: 8px;
+        }
+
+        .kpi-label {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .kpi-change {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .positive { background: rgba(76, 175, 80, 0.2); color: #4CAF50; }
+        .negative { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* Tab System */
+        .tab-container {
+            display: none;
+        }
+
+        .tab-container.active {
+            display: block;
+        }
+
+        /* Action Items */
+        .action-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border-left: 4px solid transparent;
+        }
+
+        .action-item.complete { border-left-color: #4CAF50; }
+        .action-item.in-progress { border-left-color: #FF9800; }
+        .action-item.blocked { border-left-color: #f44336; }
+        .action-item.wait { border-left-color: #FFC107; }
+
+        .action-title {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .action-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-complete { background: #4CAF50; }
+        .status-progress { background: #FF9800; }
+        .status-blocked { background: #f44336; }
+        .status-wait { background: #FFC107; color: #000; }
+
+        /* Refresh Button */
+        .refresh-btn {
+            background: linear-gradient(45deg, #00f5ff, #ff6b35);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .refresh-btn:hover {
+            opacity: 0.8;
+        }
+
+        /* Progress Bars */
+        .progress-container {
+            margin: 15px 0;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f5ff, #ff6b35);
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- News Ticker -->
+    <div class="news-ticker">
+        <div class="ticker-content">
+            <span class="ticker-item">🚀 Orion Project: $10K Real Portfolio Tracking Active</span>
+            <span class="ticker-item">📊 Starting Today: Professional Trading Setup Complete</span>
+            <span class="ticker-item">🎯 Actions: 35 tracked items ready for CEO oversight</span>
+            <span class="ticker-item">🛡️ Risk Management: 2% per trade, $250 daily limit</span>
+            <span class="ticker-item">📈 Expert KPIs: Institutional-grade tracking enabled</span>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo">
+                <h1>🚀 ORION</h1>
+                <p>$10K CEO Command Center</p>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-tab="overview">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Overview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="trading">
+                        <i class="fas fa-chart-line"></i>
+                        Trading Performance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="actions">
+                        <i class="fas fa-tasks"></i>
+                        Action Center
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="risk">
+                        <i class="fas fa-shield-alt"></i>
+                        Risk Management
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="system">
+                        <i class="fas fa-server"></i>
+                        System Status
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Header -->
+            <header class="dashboard-header">
+                <div class="header-left">
+                    <h2>🎯 CEO Command Dashboard</h2>
+                    <p>Real $10K Portfolio Tracking System</p>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-profit">$0.00</div>
+                        <div class="stat-label">Total P&L</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="active-positions">0</div>
+                        <div class="stat-label">Active Positions</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="win-rate">0.0%</div>
+                        <div class="stat-label">Win Rate</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="system-health">98%</div>
+                        <div class="stat-label">System Health</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-container active">
+                <!-- KPI Grid -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="portfolio-value">$10,000</div>
+                        <div class="kpi-label">Portfolio Value</div>
+                        <div class="kpi-change positive">Starting Today</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="daily-pnl">$0.00</div>
+                        <div class="kpi-label">Daily P&L</div>
+                        <div class="kpi-change positive">Day 1</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="max-drawdown">0.0%</div>
+                        <div class="kpi-label">Max Drawdown</div>
+                        <div class="kpi-change positive">Safe</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="risk-per-trade">2.0%</div>
+                        <div class="kpi-label">Risk Per Trade</div>
+                        <div class="kpi-change positive">$200 Max</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="total-actions">35</div>
+                        <div class="kpi-label">Action Items</div>
+                        <div class="kpi-change positive">Tracked</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="data-sources">15</div>
+                        <div class="kpi-label">Data Sources</div>
+                        <div class="kpi-change positive">All Active</div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Grid -->
+                <div class="dashboard-grid">
+                    <!-- System Status -->
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">🔧 System Status</h3>
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-label">
+                                <span>Research Center</span>
+                                <span>98%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 98%"></div>
+                            </div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-label">
+                                <span>Trading Engine</span>
+                                <span>95%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 95%"></div>
+                            </div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-label">
+                                <span>Risk Management</span>
+                                <span>100%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-label">
+                                <span>Knowledge Center</span>
+                                <span>92%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 92%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">⚡ Quick Actions</h3>
+                            <button class="refresh-btn" onclick="refreshActions()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div id="quick-actions">
+                            <div class="action-item wait">
+                                <div class="action-title">Loading actions...</div>
+                                <div class="action-status status-wait">Loading</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Tab -->
+            <div id="actions" class="tab-container">
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3 class="card-title">🎯 Action Center - 35 Items</h3>
+                        <button class="refresh-btn" onclick="refreshActions()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div id="actions-list">Loading all actions...</div>
+                </div>
+            </div>
+
+            <!-- Trading Tab -->
+            <div id="trading" class="tab-container">
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3 class="card-title">📈 Trading Performance - $10K Portfolio</h3>
+                        <button class="refresh-btn" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div id="trading-metrics">
+                        <p>Starting portfolio: $10,000</p>
+                        <p>Risk per trade: 2% ($200)</p>
+                        <p>Daily loss limit: $250</p>
+                        <p>Strategies: 4 in sandbox testing</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Tab -->
+            <div id="risk" class="tab-container">
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3 class="card-title">🛡️ Risk Management</h3>
+                        <button class="refresh-btn" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div id="risk-metrics">
+                        <p><strong>Risk Per Trade:</strong> 2% ($200)</p>
+                        <p><strong>Daily Loss Limit:</strong> $250</p>
+                        <p><strong>Current Drawdown:</strong> 0%</p>
+                        <p><strong>Risk Level:</strong> Low</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Tab -->
+            <div id="system" class="tab-container">
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3 class="card-title">🖥️ System Status</h3>
+                        <button class="refresh-btn" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div id="system-metrics">
+                        <p><strong>Dashboard API:</strong> Running on port 5001</p>
+                        <p><strong>Database:</strong> $10K tracking active</p>
+                        <p><strong>Notion Sync:</strong> 35 actions monitored</p>
+                        <p><strong>Real-time Updates:</strong> Every 30 seconds</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+    // Dashboard JavaScript with working navigation
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 $10K Dashboard initializing...');
+        initializeNavigation();
+        loadRealData();
+        startRealTimeUpdates();
+        console.log('✅ $10K Dashboard ready');
+    });
+
+    // Navigation System - FIXED
+    function initializeNavigation() {
+        const navLinks = document.querySelectorAll('.nav-link');
+        const tabContainers = document.querySelectorAll('.tab-container');
+        
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all links
+                navLinks.forEach(l => l.classList.remove('active'));
+                
+                // Hide all tab containers
+                tabContainers.forEach(tab => tab.classList.remove('active'));
+                
+                // Add active class to clicked link
+                this.classList.add('active');
+                
+                // Show corresponding tab
+                const tabId = this.getAttribute('data-tab');
+                const targetTab = document.getElementById(tabId);
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                    console.log(`✅ Switched to ${tabId} tab`);
+                }
+            });
+        });
+        console.log('✅ Navigation system initialized');
+    }
+
+    // Load Real $10K Data
+    async function loadRealData() {
+        try {
+            const [trading, actions] = await Promise.all([
+                fetch('/api/trading').then(r => r.json()),
+                fetch('/api/actions').then(r => r.json())
+            ]);
+            
+            updateRealKPIs(trading);
+            updateRealActions(actions);
+            updateTicker(trading, actions);
+            
+            console.log('✅ Real $10K data loaded');
+        } catch (error) {
+            console.error('❌ Error loading data:', error);
+        }
+    }
+
+    // Update KPIs with Real Data
+    function updateRealKPIs(trading) {
+        // Portfolio Value
+        updateElement('portfolio-value', `$${(trading.portfolio_starting_value || 10000).toLocaleString()}`);
+        
+        // Total P&L
+        const pnl = trading.total_pnl || 0;
+        updateElement('total-profit', `$${pnl.toFixed(2)}`);
+        
+        // Daily P&L
+        updateElement('daily-pnl', `$${(trading.daily_pnl || 0).toFixed(2)}`);
+        
+        // Active Positions
+        updateElement('active-positions', trading.active_positions || 0);
+        
+        // Win Rate
+        updateElement('win-rate', `${(trading.win_rate || 0).toFixed(1)}%`);
+        
+        // Max Drawdown
+        updateElement('max-drawdown', `${(trading.max_drawdown || 0).toFixed(1)}%`);
+        
+        // Risk Per Trade
+        updateElement('risk-per-trade', `${(trading.risk_per_trade || 2.0)}%`);
+    }
+
+    // Update Actions
+    function updateRealActions(actionsData) {
+        if (!actionsData.actions) return;
+        
+        // Update total actions count
+        updateElement('total-actions', actionsData.statistics?.total || 35);
+        
+        // Update quick actions
+        const quickActions = document.getElementById('quick-actions');
+        if (quickActions) {
+            quickActions.innerHTML = '';
+            actionsData.actions.slice(0, 3).forEach(action => {
+                const div = document.createElement('div');
+                div.className = `action-item ${action.status}`;
+                div.innerHTML = `
+                    <div class="action-title">${action.id}: ${action.title}</div>
+                    <div class="action-status status-${action.status}">${action.status}</div>
+                `;
+                quickActions.appendChild(div);
+            });
+        }
+        
+        // Update full actions list
+        const actionsList = document.getElementById('actions-list');
+        if (actionsList) {
+            actionsList.innerHTML = '';
+            actionsData.actions.forEach(action => {
+                const div = document.createElement('div');
+                div.className = `action-item ${action.status}`;
+                div.innerHTML = `
+                    <div class="action-title">${action.id}: ${action.title}</div>
+                    <div class="action-status status-${action.status}">${action.status}</div>
+                `;
+                actionsList.appendChild(div);
+            });
+        }
+    }
+
+    // Update News Ticker
+    function updateTicker(trading, actions) {
+        const ticker = document.querySelector('.ticker-content');
+        if (!ticker) return;
+        
+        const portfolio = trading.portfolio_starting_value || 10000;
+        const pnl = trading.total_pnl || 0;
+        const total = actions.statistics?.total || 35;
+        const completed = actions.statistics?.completed || 0;
+        
+        const items = [
+            `🚀 Orion Project: $${portfolio.toLocaleString()} Real Portfolio Active`,
+            `📊 P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (Starting Today)`,
+            `🎯 Actions: ${total} tracked, ${completed} completed`,
+            `🛡️ Risk: ${trading.risk_per_trade || 2}% per trade ($${trading.max_daily_loss || 250} daily limit)`,
+            `📈 Professional KPIs: Hedge fund-grade tracking enabled`
+        ];
+        
+        ticker.innerHTML = items.map(item => 
+            `<span class="ticker-item">${item}</span>`
+        ).join('');
+    }
+
+    // Utility function
+    function updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    }
+
+    // Refresh functions
+    async function refreshData() {
+        await loadRealData();
+    }
+
+    async function refreshActions() {
+        const actions = await fetch('/api/actions').then(r => r.json());
+        updateRealActions(actions);
+    }
+
+    // Real-time updates every 30 seconds
+    function startRealTimeUpdates() {
+        setInterval(loadRealData, 30000);
+    }
+    </script>
+</body>
+</html> 

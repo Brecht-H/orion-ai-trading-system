@@ -1,0 +1,16 @@
+{
+  "openai": {
+    "requests_per_minute": 50,
+    "tokens_per_minute": 40000
+  },
+  "anthropic": {
+    "requests_per_minute": 50,
+    "tokens_per_minute": 50000
+  },
+  "groq": {
+    "requests_per_day": 14000
+  },
+  "local_ollama": {
+    "concurrent_requests": 1
+  }
+}

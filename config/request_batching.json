@@ -1,0 +1,10 @@
+{
+  "enable_batching": true,
+  "batch_size": 10,
+  "batch_timeout": 5,
+  "batch_types": [
+    "analysis",
+    "sentiment",
+    "classification"
+  ]
+}

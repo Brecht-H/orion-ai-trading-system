@@ -1,0 +1,127 @@
+# 🛡️ ORION PROJECT GITIGNORE
+# Comprehensive exclusion list for enterprise AI trading system
+
+# 🔐 Security & API Keys
+.env
+*.env
+.env.*
+api_keys/
+credentials/
+secrets/
+config/api_credentials/
+backups/api_keys/
+
+# 🐍 Python Environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 🗄️ Databases & Data Files
+*.db
+*.sqlite
+*.sqlite3
+databases/sqlite_dbs/*.db
+databases/cache/
+databases/vector_stores/chroma_db/
+logs/*.log
+logs/*/*.log
+data/raw/
+data/temp/
+
+# 📊 Trading Data & Backups
+trading_data/
+backtest_results/
+portfolio_snapshots/
+*.csv
+*.json
+!**/config/*.json
+!.cursor/*.json
+
+# 🤖 AI Model Files
+*.model
+*.pkl
+*.joblib
+models/
+checkpoints/
+
+# 📁 System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 🔧 IDE & Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 📝 Logs & Temporary Files
+*.log
+*.tmp
+*.temp
+temp/
+tmp/
+logs/action_lists/
+logs/guardian_system/
+logs/knowledge_center/
+logs/migration_logs/
+
+# 🌐 Node.js (for MCP servers)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 🧪 Test Results
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# 📊 Reports & Generated Files
+reports/performance/
+reports/status_updates/
+*.pdf
+*.xlsx
+
+# 🔄 Backup Files
+*.bak
+*.backup
+*~
+.#*
+
+# ✅ Include Important Files
+!requirements*.txt
+!README.md
+!*.md
+!.cursor/mcp.json
+!.cursor/environment.json 

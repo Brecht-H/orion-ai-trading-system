@@ -1,0 +1,7 @@
+#!/bin/bash
+# ORION System Optimization Environment Variables
+
+export PYTHONOPTIMIZE=1
+export PYTHONDONTWRITEBYTECODE=1
+export PYTHONUNBUFFERED=1
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES

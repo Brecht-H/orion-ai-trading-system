@@ -1,0 +1,16 @@
+{
+  "simple_tasks": [
+    "mistral:7b"
+  ],
+  "medium_tasks": [
+    "qwen2:7b"
+  ],
+  "complex_tasks": [
+    "codellama:13b"
+  ],
+  "fallback_cloud": [
+    "groq",
+    "together_ai"
+  ],
+  "rotation_interval": 3600
+}

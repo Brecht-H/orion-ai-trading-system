@@ -1,0 +1,44 @@
+import pandas as pd
+import numpy as np
+from utils.logger import log_trade
+from utils.notifier import send_notification
+
+class EMACrossStrategy:
+    def __init__(self, symbol, params, notifier_enabled=True):
+        self.symbol = symbol
+        self.short_window = params.get("short_window", 12)
+        self.long_window = params.get("long_window", 26)
+        self.last_signal = None
+        self.notifier_enabled = notifier_enabled
+
+    def generate_signal(self, df):
+        if df is None or df.empty:
+            return None
+
+        df["EMA_short"] = df["close"].ewm(span=self.short_window, adjust=False).mean()
+        df["EMA_long"] = df["close"].ewm(span=self.long_window, adjust=False).mean()
+
+        if df["EMA_short"].iloc[-1] > df["EMA_long"].iloc[-1] and df["EMA_short"].iloc[-2] <= df["EMA_long"].iloc[-2]:
+            if self.last_signal != "buy":
+                self.last_signal = "buy"
+                return "buy"
+        elif df["EMA_short"].iloc[-1] < df["EMA_long"].iloc[-1] and df["EMA_short"].iloc[-2] >= df["EMA_long"].iloc[-2]:
+            if self.last_signal != "sell":
+                self.last_signal = "sell"
+                return "sell"
+        return None
+
+    def execute_trade(self, signal, price, timestamp):
+        trade_details = {
+            "strategy": "ema_cross",
+            "symbol": self.symbol,
+            "signal": signal,
+            "price": price,
+            "timestamp": timestamp,
+        }
+        log_trade(trade_details)
+
+        if self.notifier_enabled:
+            # TODO: E-mailnotificaties activeren zodra livegang plaatsvindt
+            # send_email_notification(f"EMA Cross Signal: {signal.upper()} {self.symbol} at {price} ({timestamp})")
+            send_notification(f"EMA Cross Signal: {signal.upper()} {self.symbol} at {price} ({timestamp})")

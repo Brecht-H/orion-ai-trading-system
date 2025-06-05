@@ -1,0 +1,32 @@
+{
+  "priority_order": [
+    {
+      "provider": "groq",
+      "tier": "free",
+      "daily_limit": 14000
+    },
+    {
+      "provider": "ollama_local",
+      "tier": "free",
+      "daily_limit": "unlimited"
+    },
+    {
+      "provider": "huggingface",
+      "tier": "free",
+      "daily_limit": 1000
+    },
+    {
+      "provider": "together_ai",
+      "tier": "paid",
+      "monthly_budget": 25
+    },
+    {
+      "provider": "mistral",
+      "tier": "paid",
+      "monthly_budget": 15
+    }
+  ],
+  "usage_tracking": true,
+  "auto_fallback": true,
+  "cost_optimization": true
+}

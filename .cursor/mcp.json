@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "orion_trading": {
+      "command": "python",
+      "args": [
+        "./mcp/orion_mcp_server.py"
+      ],
+      "env": {
+                  "NOTION_TOKEN": "${NOTION_TOKEN}",
+        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}",
+        "ORION_PROJECT_ROOT": "/Users/allaerthartjes/Orion_Project"
+      }
+    },
+    "jupyter_notebooks": {
+      "command": "uvx",
+      "args": [
+        "cursor-notebook-mcp",
+        "--allow-root", "/Users/allaerthartjes/Orion_Project",
+        "--log-level", "INFO"
+      ]
+    },
+    "github_integration": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    }
+  }
+}
