@@ -222,7 +222,7 @@ class UnifiedSignalGenerator:
         }
         
         # Store results
-        await self.store_unified_signals(risk_adjusted_signals)
+        await self.store_unified_signals(risk_adjusted_signals, results)
         
         print(f"✅ Unified signal generation complete:")
         print(f"   🔍 Candidate signals: {len(correlation_signals + pattern_signals)}")
@@ -961,129 +961,6 @@ class UnifiedSignalGenerator:
         
         return max(1, min(int(round(final_priority)), 5))
     
-    async def apply_signal_filters(self, signals: List[UnifiedSignal]) -> List[UnifiedSignal]:
-        """Apply final filters to unified signals"""
-        print(f"🛡️ Applying filters to {len(signals)} unified signals...")
-        
-        filtered_signals = []
-        
-        for signal in signals:
-            # Filter by confidence
-            if signal.confidence_score < 0.5:
-                continue
-            
-            # Filter by risk-reward ratio
-            if signal.risk_reward_ratio < 1.5:
-                continue
-            
-            # Filter by market regime compatibility
-            if signal.market_regime_factor < 0.5:
-                continue
-            
-            # Filter by position size (avoid extremely small positions)
-            if signal.position_size < 0.005:  # Less than 0.5%
-                continue
-            
-            filtered_signals.append(signal)
-        
-        # Limit total number of signals
-        max_signals = 8
-        if len(filtered_signals) > max_signals:
-            filtered_signals = filtered_signals[:max_signals]
-        
-        print(f"✅ {len(filtered_signals)} signals passed filters")
-        return filtered_signals
-    
-    async def calculate_signal_quality_score(self, signals: List[UnifiedSignal]) -> float:
-        """Calculate overall signal quality score"""
-        if not signals:
-            return 0.0
-        
-        # Average confidence
-        avg_confidence = np.mean([s.confidence_score for s in signals])
-        
-        # Average backtest performance
-        avg_backtest = np.mean([s.backtest_performance for s in signals])
-        
-        # Signal diversity (different sources)
-        sources = set()
-        for signal in signals:
-            evidence = signal.supporting_evidence
-            if evidence.get('correlation_signals', 0) > 0:
-                sources.add('correlation')
-            if evidence.get('pattern_signals', 0) > 0:
-                sources.add('pattern')
-            if evidence.get('backtest_validations', 0) > 0:
-                sources.add('backtest')
-        
-        diversity_score = len(sources) / 3.0  # Max 3 sources
-        
-        # Risk-adjusted score
-        avg_risk_reward = np.mean([s.risk_reward_ratio for s in signals])
-        risk_adjustment = min(avg_risk_reward / 2.0, 1.0)  # Normalize to 1.0
-        
-        # Combined quality score
-        quality_score = (avg_confidence * 0.4 + 
-                        diversity_score * 0.3 + 
-                        risk_adjustment * 0.2 + 
-                        min(avg_backtest + 0.1, 0.1) * 0.1)
-        
-        return min(quality_score, 1.0)
-    
-    async def store_unified_signals(self, signals: List[UnifiedSignal], results: Dict[str, Any]):
-        """Store unified signals in database"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        for signal in signals:
-            cursor.execute("""
-                INSERT OR REPLACE INTO unified_signals
-                (signal_id, timestamp, symbol, signal_type, confidence_level,
-                 confidence_score, entry_price, target_price, stop_loss,
-                 position_size, time_horizon, risk_reward_ratio,
-                 supporting_evidence, validation_score, market_regime_factor,
-                 correlation_strength, pattern_reliability, backtest_performance,
-                 execution_priority, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                signal.signal_id,
-                signal.timestamp.isoformat(),
-                signal.symbol,
-                signal.signal_type.value,
-                signal.confidence_level.value,
-                signal.confidence_score,
-                signal.entry_price,
-                signal.target_price,
-                signal.stop_loss,
-                signal.position_size,
-                signal.time_horizon,
-                signal.risk_reward_ratio,
-                json.dumps(signal.supporting_evidence),
-                signal.validation_score,
-                signal.market_regime_factor,
-                signal.correlation_strength,
-                signal.pattern_reliability,
-                signal.backtest_performance,
-                signal.execution_priority,
-                json.dumps(signal.metadata)
-            ))
-        
-        # Store generation results
-        cursor.execute("""
-            INSERT INTO signal_generation_runs
-            (timestamp, signals_generated, quality_score, market_regime, results_json)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            datetime.now().isoformat(),
-            len(signals),
-            results.get('signal_quality_score', 0),
-            results.get('market_regime', {}).get('regime_type', 'unknown'),
-            json.dumps(results)
-        ))
-        
-        conn.commit()
-        conn.close()
-    
     async def apply_multi_layer_filtering(self, signals: List[Dict[str, Any]], 
                                          market_regime: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Apply multi-layer filtering to remove low-quality signals"""
@@ -1141,6 +1018,336 @@ class UnifiedSignalGenerator:
         
         print(f"✅ Multi-layer filtering: {len(filtered_signals)}/{len(signals)} signals passed all filters")
         return filtered_signals
+
+    async def apply_position_sizing(self, signals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Apply optimal position sizing to validated signals"""
+        print(f"💰 Applying position sizing to {len(signals)} signals...")
+        
+        sized_signals = []
+        
+        for signal in signals:
+            try:
+                # Extract signal characteristics
+                confidence = signal.get('confidence', 0.5)
+                risk_score = signal.get('risk_score', 0.5)
+                expected_return = signal.get('expected_return', 0.02)
+                
+                # Calculate base position size using Kelly criterion
+                base_position_size = self.calculate_position_size_kelly(confidence, expected_return, risk_score)
+                
+                # Apply risk management adjustments
+                risk_adjusted_size = self.apply_risk_adjustments(base_position_size, signal)
+                
+                # Apply portfolio constraints
+                final_position_size = self.apply_portfolio_constraints(risk_adjusted_size, signal)
+                
+                # Add position size to signal
+                signal['position_size'] = final_position_size
+                signal['position_sizing_method'] = self.position_sizing_model
+                signal['sizing_confidence'] = min(confidence + 0.1, 1.0)
+                
+                sized_signals.append(signal)
+                
+            except Exception as e:
+                print(f"⚠️ Error sizing signal for {signal.get('symbol', 'unknown')}: {e}")
+                # Apply default position size
+                signal['position_size'] = 0.02  # 2% default
+                signal['position_sizing_method'] = 'default'
+                signal['sizing_confidence'] = 0.5
+                sized_signals.append(signal)
+        
+        print(f"✅ Applied position sizing to {len(sized_signals)} signals")
+        return sized_signals
+    
+    def calculate_position_size_kelly(self, confidence: float, expected_return: float, risk_score: float) -> float:
+        """Calculate position size using Kelly criterion"""
+        try:
+            # Estimate win probability from confidence
+            win_probability = confidence
+            
+            # Estimate average win/loss ratio from expected return
+            avg_win = expected_return * 1.5  # Assume some upside
+            avg_loss = expected_return * 0.5  # Assume some downside protection
+            
+            if avg_loss <= 0:
+                avg_loss = 0.02  # Default 2% loss
+            
+            # Kelly fraction: f = (bp - q) / b
+            # where b = avg_win/avg_loss, p = win_probability, q = 1 - win_probability
+            odds_ratio = avg_win / avg_loss if avg_loss > 0 else 2.0
+            kelly_fraction = (odds_ratio * win_probability - (1 - win_probability)) / odds_ratio
+            
+            # Apply conservative factor (25% of Kelly)
+            conservative_kelly = kelly_fraction * 0.25
+            
+            # Risk adjustment
+            risk_adjustment = 1 - (risk_score * 0.5)
+            
+            final_size = conservative_kelly * risk_adjustment
+            
+            # Bounds checking
+            return max(0.005, min(final_size, 0.05))  # Between 0.5% and 5%
+            
+        except Exception as e:
+            return 0.02  # 2% default
+    
+    def apply_risk_adjustments(self, base_size: float, signal: Dict[str, Any]) -> float:
+        """Apply risk management adjustments to position size"""
+        # Volatility adjustment
+        volatility = signal.get('volatility', 0.02)
+        if volatility > 0.05:  # High volatility
+            base_size *= 0.7
+        elif volatility < 0.015:  # Low volatility
+            base_size *= 1.2
+        
+        # Correlation adjustment
+        correlation_strength = signal.get('correlation_strength', 0.5)
+        if correlation_strength > 0.8:  # Highly correlated
+            base_size *= 0.8
+        
+        # Time horizon adjustment
+        time_horizon = signal.get('time_horizon', 60)
+        if time_horizon < 30:  # Very short-term
+            base_size *= 0.8
+        elif time_horizon > 240:  # Long-term
+            base_size *= 1.1
+        
+        return base_size
+    
+    def apply_portfolio_constraints(self, position_size: float, signal: Dict[str, Any]) -> float:
+        """Apply portfolio-level constraints"""
+        # Maximum single position size
+        max_single_position = self.max_portfolio_risk
+        position_size = min(position_size, max_single_position)
+        
+        # Symbol concentration limit
+        symbol = signal.get('symbol', 'BTC')
+        # In a real implementation, this would check existing positions
+        max_symbol_concentration = 0.1  # 10% max per symbol
+        position_size = min(position_size, max_symbol_concentration)
+        
+        # Minimum viable position
+        min_position = 0.005  # 0.5% minimum
+        position_size = max(position_size, min_position)
+        
+        return position_size
+
+    async def rank_and_prioritize_signals(self, signals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Rank and prioritize signals by quality and opportunity"""
+        print(f"🎯 Ranking and prioritizing {len(signals)} signals...")
+        
+        for signal in signals:
+            # Calculate priority score
+            confidence = signal.get('confidence', 0.5)
+            position_size = signal.get('position_size', 0.02)
+            expected_return = signal.get('expected_return', 0.02)
+            risk_score = signal.get('risk_score', 0.5)
+            
+            # Priority score formula
+            priority_score = (
+                confidence * 0.4 +  # Confidence weight
+                (expected_return * 10) * 0.3 +  # Expected return weight (scaled)
+                (position_size * 20) * 0.2 +  # Position size weight (scaled)
+                (1 - risk_score) * 0.1  # Inverse risk weight
+            )
+            
+            signal['priority_score'] = priority_score
+            signal['execution_priority'] = min(max(int(priority_score * 5), 1), 5)
+        
+        # Sort by priority score (highest first)
+        prioritized_signals = sorted(signals, key=lambda x: x.get('priority_score', 0), reverse=True)
+        
+        print(f"✅ Prioritized {len(prioritized_signals)} signals")
+        return prioritized_signals
+
+    async def create_unified_signals(self, signals: List[Dict[str, Any]], market_regime: Dict[str, Any]) -> List[UnifiedSignal]:
+        """Create unified signals from processed candidate signals"""
+        print(f"🔗 Creating unified signals from {len(signals)} candidates...")
+        
+        unified_signals = []
+        
+        # Group signals by symbol for consolidation
+        symbol_groups = {}
+        for signal in signals:
+            symbol = signal.get('symbol', 'BTC')
+            if symbol not in symbol_groups:
+                symbol_groups[symbol] = []
+            symbol_groups[symbol].append(signal)
+        
+        for symbol, symbol_signals in symbol_groups.items():
+            try:
+                unified_signal = await self.create_unified_signal(symbol, symbol_signals, market_regime)
+                if unified_signal:
+                    unified_signals.append(unified_signal)
+            except Exception as e:
+                print(f"⚠️ Error creating unified signal for {symbol}: {e}")
+                continue
+        
+        print(f"✅ Created {len(unified_signals)} unified signals")
+        return unified_signals
+
+    async def apply_final_risk_check(self, signals: List[UnifiedSignal]) -> List[UnifiedSignal]:
+        """Apply final risk management checks"""
+        print(f"🛡️ Applying final risk checks to {len(signals)} signals...")
+        
+        approved_signals = []
+        
+        for signal in signals:
+            # Risk checks
+            if signal.confidence_score < 0.4:
+                continue
+            
+            if signal.position_size > self.max_portfolio_risk:
+                signal.position_size = self.max_portfolio_risk
+            
+            if signal.risk_reward_ratio < 1.0:
+                continue
+            
+            # Check for excessive correlation exposure
+            # In real implementation, this would check against existing positions
+            
+            approved_signals.append(signal)
+        
+        print(f"✅ {len(approved_signals)} signals passed final risk checks")
+        return approved_signals
+
+    async def generate_execution_recommendations(self, signals: List[UnifiedSignal]) -> List[Dict[str, Any]]:
+        """Generate execution recommendations for approved signals"""
+        recommendations = []
+        
+        for signal in signals:
+            recommendation = {
+                'signal_id': signal.signal_id,
+                'symbol': signal.symbol,
+                'action': 'EXECUTE' if signal.execution_priority >= 3 else 'MONITOR',
+                'urgency': 'HIGH' if signal.execution_priority >= 4 else 'MEDIUM',
+                'position_size': signal.position_size,
+                'entry_strategy': 'MARKET' if signal.execution_priority >= 4 else 'LIMIT',
+                'risk_management': {
+                    'stop_loss': signal.stop_loss,
+                    'take_profit': signal.target_price,
+                    'max_hold_time': signal.time_horizon
+                },
+                'confidence_assessment': signal.confidence_level.value,
+                'market_timing': 'IMMEDIATE' if signal.market_regime_factor > 1.0 else 'WHEN_SUITABLE'
+            }
+            recommendations.append(recommendation)
+        
+        return recommendations
+
+    async def update_performance_metrics(self) -> Dict[str, Any]:
+        """Update performance tracking metrics"""
+        # In a real implementation, this would analyze historical signal performance
+        # and update the performance_metrics dataclass
+        
+        return {
+            'signals_generated_today': len(self.signal_history),
+            'average_confidence': np.mean([s.confidence_score for s in self.signal_history]) if self.signal_history else 0,
+            'performance_trend': 'improving',  # Placeholder
+            'system_health': 'optimal'
+        }
+
+    async def calculate_signal_quality_score(self, signals: List[UnifiedSignal]) -> float:
+        """Calculate overall signal quality score"""
+        if not signals:
+            return 0.0
+        
+        # Average confidence
+        avg_confidence = np.mean([s.confidence_score for s in signals])
+        
+        # Average backtest performance
+        avg_backtest = np.mean([s.backtest_performance for s in signals])
+        
+        # Signal diversity (different sources)
+        sources = set()
+        for signal in signals:
+            evidence = signal.supporting_evidence
+            if evidence.get('correlation_signals', 0) > 0:
+                sources.add('correlation')
+            if evidence.get('pattern_signals', 0) > 0:
+                sources.add('pattern')
+            if evidence.get('backtest_validations', 0) > 0:
+                sources.add('backtest')
+        
+        diversity_score = len(sources) / 3.0  # Max 3 sources
+        
+        # Risk-adjusted score
+        avg_risk_reward = np.mean([s.risk_reward_ratio for s in signals])
+        risk_adjustment = min(avg_risk_reward / 2.0, 1.0)  # Normalize to 1.0
+        
+        # Combined quality score
+        quality_score = (avg_confidence * 0.4 + 
+                        diversity_score * 0.3 + 
+                        risk_adjustment * 0.2 + 
+                        min(avg_backtest + 0.1, 0.1) * 0.1)
+        
+        return min(quality_score, 1.0)
+
+    async def store_unified_signals(self, signals: List[UnifiedSignal], results: Dict[str, Any]):
+        """Store unified signals in database"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Create signal_generation_runs table if it doesn't exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS signal_generation_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                signals_generated INTEGER NOT NULL,
+                quality_score REAL NOT NULL,
+                market_regime TEXT NOT NULL,
+                results_json TEXT NOT NULL
+            )
+        """)
+        
+        for signal in signals:
+            cursor.execute("""
+                INSERT OR REPLACE INTO unified_signals
+                (signal_id, timestamp, symbol, signal_type, confidence_level,
+                 confidence_score, entry_price, target_price, stop_loss,
+                 position_size, time_horizon, risk_reward_ratio,
+                 supporting_evidence, validation_score, market_regime_factor,
+                 correlation_strength, pattern_reliability, backtest_performance,
+                 execution_priority, metadata)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                signal.signal_id,
+                signal.timestamp.isoformat(),
+                signal.symbol,
+                signal.signal_type.value,
+                signal.confidence_level.value,
+                signal.confidence_score,
+                signal.entry_price,
+                signal.target_price,
+                signal.stop_loss,
+                signal.position_size,
+                signal.time_horizon,
+                signal.risk_reward_ratio,
+                json.dumps(signal.supporting_evidence),
+                signal.validation_score,
+                signal.market_regime_factor,
+                signal.correlation_strength,
+                signal.pattern_reliability,
+                signal.backtest_performance,
+                signal.execution_priority,
+                json.dumps(signal.metadata)
+            ))
+        
+        # Store generation results
+        cursor.execute("""
+            INSERT INTO signal_generation_runs
+            (timestamp, signals_generated, quality_score, market_regime, results_json)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            datetime.now().isoformat(),
+            len(signals),
+            results.get('signal_quality_score', 0),
+            results.get('market_regime', {}).get('regime_type', 'unknown'),
+            json.dumps(results)
+        ))
+        
+        conn.commit()
+        conn.close()
 
     async def validate_signals_with_backtest(self, signals: List[Dict[str, Any]], 
                                            backtest_data: Dict[str, Any]) -> List[Dict[str, Any]]:

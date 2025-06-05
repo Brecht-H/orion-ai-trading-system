@@ -16,6 +16,59 @@ from dataclasses import dataclass, asdict
 import warnings
 warnings.filterwarnings('ignore')
 
+def safe_dataclass_to_dict(obj):
+    """Safely convert dataclass to dictionary, handling datetime objects"""
+    if obj is None:
+        return None
+    
+    def convert_item(item):
+        if isinstance(item, (pd.Timestamp, datetime)):
+            return item.isoformat()
+        elif isinstance(item, (np.integer, np.int64)):
+            return int(item)
+        elif isinstance(item, (np.floating, np.float64)):
+            return float(item)
+        elif isinstance(item, np.ndarray):
+            return item.tolist()
+        elif isinstance(item, dict):
+            return {k: convert_item(v) for k, v in item.items()}
+        elif isinstance(item, list):
+            return [convert_item(v) for v in item]
+        else:
+            return item
+    
+    try:
+        # Convert dataclass to dict first
+        data_dict = asdict(obj)
+        # Then convert all items safely
+        return convert_item(data_dict)
+    except Exception as e:
+        # Fallback to manual conversion
+        return {
+            'pattern_id': getattr(obj, 'pattern_id', 'unknown'),
+            'symbol': getattr(obj, 'symbol', 'unknown'),
+            'start_date': getattr(obj, 'start_date', datetime.now()).isoformat(),
+            'end_date': getattr(obj, 'end_date', datetime.now()).isoformat(),
+            'total_trades': getattr(obj, 'total_trades', 0),
+            'winning_trades': getattr(obj, 'winning_trades', 0),
+            'losing_trades': getattr(obj, 'losing_trades', 0),
+            'win_rate': float(getattr(obj, 'win_rate', 0)),
+            'total_return': float(getattr(obj, 'total_return', 0)),
+            'total_return_percentage': float(getattr(obj, 'total_return_percentage', 0)),
+            'sharpe_ratio': float(getattr(obj, 'sharpe_ratio', 0)),
+            'sortino_ratio': float(getattr(obj, 'sortino_ratio', 0)),
+            'max_drawdown': float(getattr(obj, 'max_drawdown', 0)),
+            'calmar_ratio': float(getattr(obj, 'calmar_ratio', 0)),
+            'profit_factor': float(getattr(obj, 'profit_factor', 0)),
+            'avg_win': float(getattr(obj, 'avg_win', 0)),
+            'avg_loss': float(getattr(obj, 'avg_loss', 0)),
+            'avg_trade_duration': float(getattr(obj, 'avg_trade_duration', 0)),
+            'best_trade': float(getattr(obj, 'best_trade', 0)),
+            'worst_trade': float(getattr(obj, 'worst_trade', 0)),
+            'volatility': float(getattr(obj, 'volatility', 0)),
+            'metadata': getattr(obj, 'metadata', {})
+        }
+
 @dataclass
 class BacktestResult:
     pattern_id: str
@@ -128,6 +181,24 @@ class AdvancedPatternBacktester:
             )
         """)
         
+        # Pattern validation table (for unified signal generator compatibility)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS pattern_validation (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pattern_id TEXT NOT NULL,
+                validation_date TEXT NOT NULL,
+                pattern_reliability REAL NOT NULL,
+                success_rate REAL NOT NULL,
+                total_trades INTEGER NOT NULL,
+                avg_return REAL NOT NULL,
+                risk_score REAL NOT NULL,
+                confidence_score REAL NOT NULL,
+                market_conditions TEXT NOT NULL,
+                validation_status TEXT NOT NULL,
+                metadata TEXT NOT NULL
+            )
+        """)
+        
         conn.commit()
         conn.close()
         print("✅ Backtesting databases initialized")
@@ -167,7 +238,7 @@ class AdvancedPatternBacktester:
             'lookback_days': lookback_days,
             'patterns_tested': len(patterns),
             'successful_backtests': len(backtest_results),
-            'backtest_results': [asdict(result) for result in backtest_results],
+            'backtest_results': [safe_dataclass_to_dict(result) for result in backtest_results],
             'pattern_analysis': pattern_analysis,
             'improvement_recommendations': recommendations,
             'overall_performance': await self.calculate_overall_performance(backtest_results)
@@ -175,6 +246,9 @@ class AdvancedPatternBacktester:
         
         # 7. Store results
         await self.store_backtest_results(comprehensive_results)
+        
+        # 8. Store pattern validation results for unified signal generator
+        await self.store_pattern_validation_results(comprehensive_results)
         
         print(f"✅ Backtesting complete:")
         print(f"   📊 Patterns tested: {len(patterns)}")
@@ -720,6 +794,77 @@ class AdvancedPatternBacktester:
         
         conn.commit()
         conn.close()
+    
+    async def store_pattern_validation_results(self, results: Dict[str, Any]):
+        """Store pattern validation results for unified signal generator compatibility"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        current_time = datetime.now().isoformat()
+        
+        # Create validation entries based on backtest results
+        for result_dict in results.get('backtest_results', []):
+            try:
+                # Calculate pattern reliability score based on performance
+                win_rate = result_dict.get('win_rate', 0)
+                sharpe_ratio = result_dict.get('sharpe_ratio', 0)
+                total_return_pct = result_dict.get('total_return_percentage', 0)
+                max_drawdown = result_dict.get('max_drawdown', 0.1)
+                
+                # Pattern reliability formula
+                reliability_score = (
+                    win_rate * 0.4 + 
+                    min(max(sharpe_ratio / 2.0, 0), 1.0) * 0.3 +
+                    min(max(total_return_pct + 0.1, 0), 0.2) * 0.2 +
+                    (1 - min(max_drawdown, 1.0)) * 0.1
+                )
+                
+                # Risk score (inverse of performance)
+                risk_score = max(0.1, min(1.0 - reliability_score + 0.3, 1.0))
+                
+                # Confidence score based on trade count and win rate
+                total_trades = result_dict.get('total_trades', 0)
+                confidence_score = min(
+                    win_rate * 0.7 + min(total_trades / 50.0, 1.0) * 0.3,
+                    1.0
+                )
+                
+                # Validation status
+                validation_status = 'validated' if reliability_score > 0.5 else 'needs_improvement'
+                
+                cursor.execute("""
+                    INSERT OR REPLACE INTO pattern_validation
+                    (pattern_id, validation_date, pattern_reliability, success_rate,
+                     total_trades, avg_return, risk_score, confidence_score,
+                     market_conditions, validation_status, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    result_dict['pattern_id'],
+                    current_time,
+                    reliability_score,
+                    win_rate,
+                    total_trades,
+                    total_return_pct,
+                    risk_score,
+                    confidence_score,
+                    'normal',  # Simplified market conditions
+                    validation_status,
+                    json.dumps({
+                        'symbol': result_dict.get('symbol', 'unknown'),
+                        'sharpe_ratio': sharpe_ratio,
+                        'max_drawdown': max_drawdown,
+                        'backtest_period': f"{result_dict.get('start_date', '')} to {result_dict.get('end_date', '')}",
+                        'validation_method': 'backtest_analysis'
+                    })
+                ))
+                
+            except Exception as e:
+                print(f"⚠️ Error storing validation for pattern {result_dict.get('pattern_id', 'unknown')}: {e}")
+                continue
+        
+        conn.commit()
+        conn.close()
+        print(f"✅ Stored validation results for {len(results.get('backtest_results', []))} patterns")
 
 if __name__ == "__main__":
     async def main():
