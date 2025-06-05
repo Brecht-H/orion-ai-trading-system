@@ -1,0 +1,81 @@
+{
+  "agent": {
+    "name": "Orion Background Agent",
+    "description": "Enterprise AI Trading System - Autonomous Development Agent",
+    "version": "1.0.0",
+    "model": "claude-3-5-sonnet-20241022",
+    "instructions_file": "BACKGROUND_AGENT_EXPERT_PROMPT.md",
+    "max_iterations": 50,
+    "auto_commit": true,
+    "auto_push": false
+  },
+  "project": {
+    "name": "Orion AI Trading System",
+    "type": "enterprise_trading_platform",
+    "language": "python",
+    "framework": "multi_module_ai_system",
+    "repository": "https://github.com/Brecht-H/orion-ai-trading-system.git"
+  },
+  "constraints": {
+    "never_modify": [
+      ".env",
+      "databases/sqlite_dbs/*.db",
+      "trading_execution_center/core/live_trading_engine.py",
+      "risk_management_center/core/advanced_risk_manager.py"
+    ],
+    "safe_to_modify": [
+      "tests/**/*",
+      "logs/**/*",
+      "documentation/**/*",
+      "*.md",
+      "requirements*.txt"
+    ],
+    "require_validation": [
+      "core_orchestration/**/*",
+      "strategy_center/**/*",
+      "knowledge_center/**/*"
+    ]
+  },
+  "priorities": {
+    "immediate": [
+      "Fix Week 2 enhancement test failures (target: 90%+ success rate)",
+      "Install missing dependencies: scipy, yfinance",
+      "Implement missing validate_patterns method",
+      "Create correlation analysis database tables"
+    ],
+    "high": [
+      "Enhance system monitoring and alerting",
+      "Optimize AI agent communication efficiency",
+      "Improve database query performance",
+      "Update documentation with recent changes"
+    ],
+    "medium": [
+      "Code quality improvements",
+      "Performance optimization",
+      "Test coverage expansion",
+      "Architecture documentation"
+    ]
+  },
+  "success_metrics": {
+    "week2_test_success_rate": {
+      "current": 25,
+      "target": 90,
+      "critical": true
+    },
+    "system_health_score": {
+      "current": 74.3,
+      "target": 85,
+      "critical": true
+    },
+    "dependencies_installed": {
+      "required": ["scipy", "yfinance"],
+      "critical": true
+    }
+  },
+  "safety_protocols": {
+    "backup_before_changes": true,
+    "run_tests_after_changes": true,
+    "validate_system_health": true,
+    "emergency_rollback_available": true
+  }
+} 
