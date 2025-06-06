@@ -15,6 +15,8 @@ import json
 from dataclasses import dataclass, asdict
 from enum import Enum
 import warnings
+import os
+import logging
 warnings.filterwarnings('ignore')
 
 class PatternType(Enum):
@@ -83,6 +85,15 @@ class AdvancedPatternRecognition:
         # Discovered patterns
         self.active_patterns: List[TradingPattern] = []
         self.generated_signals: List[TradingSignal] = []
+        
+        # 🔧 CRITICAL FIX: Setup logger
+        self.logger = logging.getLogger(__name__)
+        if not self.logger.handlers:
+            # Setup basic logging if not already configured
+            logging.basicConfig(
+                level=logging.INFO,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
         
     def setup_databases(self):
         """Initialize pattern recognition databases"""
@@ -219,7 +230,7 @@ class AdvancedPatternRecognition:
         correlation_data = await self.load_correlation_analysis()
         
         # 2. Load current market data
-        market_data = await self.load_current_market_data()
+        market_data = await self.load_recent_market_data()
         
         # 3. Identify trading patterns
         discovered_patterns = await self.identify_trading_patterns(correlation_data, market_data)
@@ -293,59 +304,138 @@ class AdvancedPatternRecognition:
             print(f"⚠️ Could not load correlation data: {e}")
             return {'correlation_patterns': pd.DataFrame(), 'predictive_signals': pd.DataFrame()}
     
-    async def load_current_market_data(self) -> pd.DataFrame:
-        """Load current market data for pattern validation"""
+    async def load_recent_market_data(self) -> pd.DataFrame:
+        """🔥 CRITICAL FIX: Load real market data instead of generating mock data"""
         try:
-            # Try to load from free sources
-            free_data_db = "databases/sqlite_dbs/free_sources_data.db"
-            if Path(free_data_db).exists():
-                conn = sqlite3.connect(free_data_db)
+            # First try to load from free sources database (real data)
+            free_sources_db = "data/free_sources_data.db"
+            
+            if os.path.exists(free_sources_db):
+                self.logger.info("📊 Loading REAL market data from free sources...")
                 
-                # Get latest market data
+                conn = sqlite3.connect(free_sources_db)
+                
+                # Load recent market data (last 24 hours)
+                cutoff_time = (datetime.now() - timedelta(hours=24)).timestamp()
+                
                 query = """
-                    SELECT timestamp, source_name, data_type, symbol, value
+                    SELECT timestamp, source_name, data_type, symbol, value, raw_data
                     FROM free_data 
                     WHERE timestamp > ?
                     ORDER BY timestamp DESC
-                    LIMIT 1000
                 """
                 
-                cutoff_time = (datetime.now() - timedelta(hours=6)).timestamp()
                 df = pd.read_sql_query(query, conn, params=[cutoff_time])
                 conn.close()
                 
                 if not df.empty:
-                    return self.process_market_data(df)
+                    self.logger.info(f"✅ Loaded {len(df)} real market data records")
+                    return self.process_real_market_data(df)
+                else:
+                    self.logger.warning("⚠️ No recent real data found, falling back to sample data")
+            else:
+                self.logger.warning("⚠️ Free sources database not found, falling back to sample data")
             
-            # Generate sample data if no real data available
+            # Fallback to sample data only if no real data available
             return await self.generate_sample_market_data()
             
         except Exception as e:
-            print(f"⚠️ Error loading market data: {e}")
+            self.logger.error(f"❌ Error loading market data: {e}")
+            # Emergency fallback to sample data
             return await self.generate_sample_market_data()
     
-    def process_market_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Process raw market data into analysis format"""
-        # Convert to pivot table format
-        df['datetime'] = pd.to_datetime(df['timestamp'], unit='s')
-        
-        pivot_df = df.pivot_table(
-            index='datetime',
-            columns=['source_name', 'data_type'],
-            values='value',
-            aggfunc='mean'
-        )
-        
-        # Flatten column names
-        pivot_df.columns = [f"{col[0]}_{col[1]}" for col in pivot_df.columns]
-        
-        # Add technical indicators
-        for col in pivot_df.columns:
-            if 'price' in col.lower():
-                pivot_df[f"{col}_rsi"] = self.calculate_rsi(pivot_df[col])
-                pivot_df[f"{col}_volatility"] = pivot_df[col].rolling(window=20).std()
+    def process_real_market_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """🔄 Process real market data into analysis format"""
+        try:
+            processed_data = []
+            
+            # Process each data point
+            for _, row in df.iterrows():
+                try:
+                    # Parse the raw JSON data
+                    raw_data = json.loads(row['raw_data'])
+                    
+                    # Extract price data from different sources
+                    if row['data_type'] == 'crypto_price':
+                        if 'price_usd' in raw_data:
+                            # CoinGecko format
+                            processed_data.append({
+                                'timestamp': pd.to_datetime(row['timestamp'], unit='s'),
+                                'symbol': row['symbol'],
+                                'price': float(raw_data.get('price_usd', 0)),
+                                'volume': float(raw_data.get('volume_24h', 0)),
+                                'change_24h': float(raw_data.get('change_24h', 0)),
+                                'source': row['source_name']
+                            })
+                        elif 'price' in raw_data:
+                            # Binance format
+                            processed_data.append({
+                                'timestamp': pd.to_datetime(row['timestamp'], unit='s'),
+                                'symbol': row['symbol'],
+                                'price': float(raw_data.get('price', 0)),
+                                'volume': float(raw_data.get('volume_24h', 0)),
+                                'change_24h': float(raw_data.get('change_24h', 0)),
+                                'source': row['source_name']
+                            })
+                    
+                    elif row['data_type'] == 'sentiment':
+                        # Process sentiment data
+                        if 'fear_greed_index' in raw_data:
+                            processed_data.append({
+                                'timestamp': pd.to_datetime(row['timestamp'], unit='s'),
+                                'symbol': 'CRYPTO_MARKET',
+                                'sentiment_score': float(raw_data.get('fear_greed_index', 50)) / 100,
+                                'sentiment_class': raw_data.get('classification', 'neutral'),
+                                'source': row['source_name']
+                            })
+                        elif 'avg_sentiment' in raw_data:
+                            processed_data.append({
+                                'timestamp': pd.to_datetime(row['timestamp'], unit='s'),
+                                'symbol': 'SOCIAL_SENTIMENT',
+                                'sentiment_score': float(raw_data.get('avg_sentiment', 0)),
+                                'posts_analyzed': int(raw_data.get('posts_analyzed', 0)),
+                                'source': row['source_name']
+                            })
+                    
+                except Exception as e:
+                    self.logger.debug(f"⚠️ Skipping malformed data row: {e}")
+                    continue
+            
+            if not processed_data:
+                self.logger.warning("⚠️ No valid price data found in real data")
+                return pd.DataFrame()
+            
+            # Convert to DataFrame
+            market_df = pd.DataFrame(processed_data)
+            
+            # Pivot to get symbols as columns
+            if 'price' in market_df.columns:
+                price_pivot = market_df[market_df['price'] > 0].pivot_table(
+                    index='timestamp',
+                    columns='symbol',
+                    values='price',
+                    aggfunc='mean'
+                )
                 
-        return pivot_df.fillna(method='ffill').fillna(0)
+                # Add technical indicators for each symbol
+                for symbol in price_pivot.columns:
+                    if len(price_pivot[symbol].dropna()) > 14:  # Need enough data for RSI
+                        price_pivot[f"{symbol}_rsi"] = self.calculate_rsi(price_pivot[symbol])
+                        price_pivot[f"{symbol}_volatility"] = price_pivot[symbol].rolling(window=20).std()
+                        price_pivot[f"{symbol}_momentum"] = price_pivot[symbol].pct_change(5)
+                
+                # Fill NaN values
+                price_pivot = price_pivot.fillna(method='ffill').fillna(0)
+                
+                self.logger.info(f"✅ Processed real market data: {len(price_pivot)} timestamps, {len(price_pivot.columns)} indicators")
+                return price_pivot
+            
+            self.logger.warning("⚠️ No price data found in processed data")
+            return pd.DataFrame()
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error processing real market data: {e}")
+            return pd.DataFrame()
     
     def calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
         """Calculate RSI indicator"""
@@ -845,8 +935,8 @@ class AdvancedPatternRecognition:
         conn.close()
     
     async def generate_sample_market_data(self) -> pd.DataFrame:
-        """Generate sample market data for testing"""
-        print("🔧 Generating sample market data...")
+        """🔧 Generate sample market data ONLY as fallback"""
+        self.logger.warning("⚠️ Using SAMPLE data - real data unavailable")
         
         dates = pd.date_range(start=datetime.now() - timedelta(hours=6), 
                             end=datetime.now(), freq='5min')
@@ -858,9 +948,10 @@ class AdvancedPatternRecognition:
         sample_data['ETH_price'] = 3000 + np.cumsum(np.random.randn(len(dates)) * 50)
         
         # Add technical indicators
-        sample_data['BTC_price_rsi'] = self.calculate_rsi(sample_data['BTC_price'])
-        sample_data['ETH_price_rsi'] = self.calculate_rsi(sample_data['ETH_price'])
+        sample_data['BTC_rsi'] = self.calculate_rsi(sample_data['BTC_price'])
+        sample_data['ETH_rsi'] = self.calculate_rsi(sample_data['ETH_price'])
         
+        self.logger.warning("⚠️ SAMPLE DATA GENERATED - NOT FOR LIVE TRADING")
         return sample_data.fillna(50)  # Fill RSI NaNs with neutral value
 
 if __name__ == "__main__":

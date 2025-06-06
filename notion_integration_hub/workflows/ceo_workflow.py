@@ -18,18 +18,29 @@ from pathlib import Path
 import uuid
 import threading
 import time
+import logging
+import sys
+import os
 
-# Configuration
-NOTION_API_KEY = "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"
-NOTION_API_URL = "https://api.notion.com/v1"
-NOTION_VERSION = "2022-06-28"
-WORKING_DATABASE_ID = "207cba76-1065-80de-8321-e993dd0e8b34"
+# Add project root to path
+sys.path.append(str(Path(__file__).parent.parent.parent))
 
-headers = {
+# 🔐 SECURE CREDENTIAL LOADING
+# Load sensitive credentials from environment variables
+NOTION_API_KEY = os.getenv('NOTION_API_KEY')
+if not NOTION_API_KEY:
+    raise ValueError("❌ NOTION_API_KEY not found in environment variables. Please check .env file.")
+
+NOTION_DATABASE_ID = os.getenv('NOTION_DATABASE_ID', '6fb5e6d7fafb452790c9ba6e2b22feb6')
+
+# 🛡️ SECURE HEADERS
+HEADERS = {
     "Authorization": f"Bearer {NOTION_API_KEY}",
     "Content-Type": "application/json",
-    "Notion-Version": NOTION_VERSION
+    "Notion-Version": "2022-06-28"
 }
+
+WORKING_DATABASE_ID = "207cba76-1065-80de-8321-e993dd0e8b34"
 
 class OrionCLevelCoordinationSystem:
     """
@@ -817,8 +828,8 @@ CEO Control Level: 🟢 FULL CONTROL with AI assistance"""
         
         try:
             response = requests.post(
-                f"{NOTION_API_URL}/pages",
-                headers=headers,
+                f"https://api.notion.com/v1/pages",
+                headers=HEADERS,
                 json=page_data
             )
             

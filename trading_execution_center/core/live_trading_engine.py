@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🚀 LIVE TRADING ENGINE
+🚀 LIVE TRADING ENGINE - SECURITY HARDENED
 Enterprise-grade trading execution system for the Orion Project
 
 This engine connects sandbox-tested strategies to live trading APIs
@@ -20,6 +20,10 @@ from pathlib import Path
 from dataclasses import dataclass
 import json
 from decimal import Decimal, ROUND_HALF_UP
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 @dataclass
 class TradeOrder:
@@ -45,64 +49,78 @@ class Position:
 
 class LiveTradingEngine:
     """
-    LIVE TRADING ENGINE
+    LIVE TRADING ENGINE - SECURITY HARDENED
     
     CAPABILITIES:
-    - Bybit testnet/mainnet trading integration
+    - Bybit V5 API integration (testnet/mainnet)
     - Institutional-grade risk management (2% per trade max)
     - Real-time position monitoring
     - Automated stop-loss and take-profit execution
     - Strategy performance tracking
     - Emergency shutdown protocols
+    - Dynamic risk parameters based on portfolio size
     """
     
-    def __init__(self, testnet: bool = True):
+    def __init__(self, testnet: bool = None):
+        # Load configuration from environment
+        if testnet is None:
+            testnet = os.getenv('BYBIT_TESTNET', 'true').lower() == 'true'
+        
         self.testnet = testnet
         self.setup_logging()
         self.setup_database()
         self.load_credentials()
         
-        # INSTITUTIONAL RISK CONTROLS - CEO APPROVED
+        # Load risk controls from environment with defaults
         self.risk_controls = {
-            'max_position_size_percent': 2.0,  # 2% per trade maximum
-            'max_daily_loss_percent': 2.5,     # 2.5% daily loss limit 
-            'max_total_positions': 5,          # Maximum 5 simultaneous positions
-            'portfolio_value': 10000.0,        # Starting $10K portfolio
-            'max_single_trade': 200.0,         # $200 maximum per trade
-            'max_daily_loss': 250.0,           # $250 maximum daily loss
-            'emergency_stop_loss': 500.0       # $500 total loss triggers emergency stop
+            'max_position_size_percent': float(os.getenv('MAX_POSITION_SIZE_PERCENT', '2.0')),
+            'max_daily_loss_percent': float(os.getenv('MAX_DAILY_LOSS_PERCENT', '2.5')),
+            'max_total_positions': 5,
+            'portfolio_value': float(os.getenv('DEFAULT_PORTFOLIO_VALUE', '10000.0')),
+            'emergency_stop_loss_percent': float(os.getenv('EMERGENCY_STOP_LOSS_PERCENT', '5.0'))
         }
+        
+        # Calculate dynamic limits based on portfolio size
+        self.risk_controls['max_single_trade'] = self.risk_controls['portfolio_value'] * (self.risk_controls['max_position_size_percent'] / 100)
+        self.risk_controls['max_daily_loss'] = self.risk_controls['portfolio_value'] * (self.risk_controls['max_daily_loss_percent'] / 100)
+        self.risk_controls['emergency_stop_loss'] = self.risk_controls['portfolio_value'] * (self.risk_controls['emergency_stop_loss_percent'] / 100)
         
         # Trading parameters
         self.base_url = "https://api-testnet.bybit.com" if testnet else "https://api.bybit.com"
         self.session = requests.Session()
         
+        # Rate limiting
+        self.rate_limit_per_minute = int(os.getenv('BYBIT_RATE_LIMIT_PER_MINUTE', '120'))
+        self.last_request_time = 0
+        self.request_count = 0
+        self.rate_limit_window = []
+        
         # Strategy mappings to approved sandbox strategies
         self.strategies = {
             'momentum_breakout': {
                 'name': 'AI Momentum Breakout',
-                'allocation': 10000.0,
+                'allocation': self.risk_controls['portfolio_value'],
                 'risk_score': 2.4,
                 'win_rate': 68,
                 'enabled': True
             },
             'mean_reversion': {
                 'name': 'Mean Reversion Master', 
-                'allocation': 10000.0,
+                'allocation': self.risk_controls['portfolio_value'],
                 'risk_score': 1.8,
                 'win_rate': 74,
                 'enabled': True
             },
             'lightning_breakout': {
                 'name': 'Lightning Breakout Pro',
-                'allocation': 10000.0,
+                'allocation': self.risk_controls['portfolio_value'],
                 'risk_score': 3.2,
                 'win_rate': 61,
                 'enabled': False  # High risk - requires CEO approval
             },
             'smart_swing': {
                 'name': 'Smart Swing Trader',
-                'allocation': 10000.0,
+                'allocation': self.risk_controls['portfolio_value'],
                 'risk_score': 2.1,
                 'win_rate': 59,
                 'enabled': True
@@ -188,18 +206,42 @@ class LiveTradingEngine:
         self.db_path = db_path
         
     def load_credentials(self):
-        """Load Bybit API credentials"""
-        self.api_key = os.getenv('BYBIT_API_KEY')
-        self.api_secret = os.getenv('BYBIT_API_SECRET')
+        """🔐 Load Bybit API credentials from environment variables"""
+        if self.testnet:
+            self.api_key = os.getenv('BYBIT_API_KEY')
+            self.api_secret = os.getenv('BYBIT_API_SECRET')
+        else:
+            self.api_key = os.getenv('BYBIT_API_KEY')
+            self.api_secret = os.getenv('BYBIT_API_SECRET')
         
         if not self.api_key or not self.api_secret:
-            raise ValueError("❌ Bybit API credentials not found in environment variables")
+            raise ValueError(f"❌ Bybit API credentials not found in environment variables. Please check .env file.")
             
         self.logger.info("✅ Bybit API credentials loaded successfully")
         
+    def check_rate_limit(self):
+        """🛡️ Check and enforce rate limiting"""
+        current_time = time.time()
+        
+        # Remove requests older than 1 minute
+        self.rate_limit_window = [t for t in self.rate_limit_window if current_time - t < 60]
+        
+        # Check if we're hitting the rate limit
+        if len(self.rate_limit_window) >= self.rate_limit_per_minute:
+            sleep_time = 60 - (current_time - self.rate_limit_window[0])
+            if sleep_time > 0:
+                self.logger.warning(f"⚠️ Rate limit reached. Waiting {sleep_time:.2f} seconds...")
+                time.sleep(sleep_time)
+        
+        # Add current request to window
+        self.rate_limit_window.append(current_time)
+        
     def generate_signature(self, params: str, timestamp: str) -> str:
-        """Generate Bybit API signature"""
-        param_str = timestamp + self.api_key + "5000" + params
+        """🔐 Generate Bybit V5 API signature"""
+        # Correct V5 signature format: timestamp + api_key + recv_window + params
+        recv_window = "5000"
+        param_str = timestamp + self.api_key + recv_window + params
+        
         return hmac.new(
             bytes(self.api_secret, "utf-8"),
             param_str.encode("utf-8"),
@@ -207,16 +249,20 @@ class LiveTradingEngine:
         ).hexdigest()
         
     def make_request(self, endpoint: str, method: str = "GET", params: Dict = None) -> Dict:
-        """Make authenticated request to Bybit API"""
+        """🛡️ Make authenticated request to Bybit V5 API with rate limiting"""
         if params is None:
             params = {}
+        
+        # Check rate limit before making request
+        self.check_rate_limit()
             
         timestamp = str(int(time.time() * 1000))
+        recv_window = "5000"
         
         if method == "GET":
             param_str = "&".join([f"{k}={v}" for k, v in sorted(params.items())])
         else:
-            param_str = json.dumps(params)
+            param_str = json.dumps(params) if params else ""
             
         signature = self.generate_signature(param_str, timestamp)
         
@@ -225,7 +271,7 @@ class LiveTradingEngine:
             "X-BAPI-SIGN": signature,
             "X-BAPI-SIGN-TYPE": "2",
             "X-BAPI-TIMESTAMP": timestamp,
-            "X-BAPI-RECV-WINDOW": "5000",
+            "X-BAPI-RECV-WINDOW": recv_window,
             "Content-Type": "application/json"
         }
         
@@ -233,17 +279,30 @@ class LiveTradingEngine:
         
         try:
             if method == "GET":
-                response = self.session.get(url, headers=headers, params=params)
+                response = self.session.get(url, headers=headers, params=params, timeout=10)
             else:
-                response = self.session.post(url, headers=headers, json=params)
+                response = self.session.post(url, headers=headers, json=params, timeout=10)
                 
             response.raise_for_status()
-            return response.json()
+            result = response.json()
             
-        except Exception as e:
+            # Check for API errors
+            if result.get('retCode') != 0:
+                error_msg = result.get('retMsg', 'Unknown error')
+                self.logger.error(f"❌ API Error: {error_msg} (Code: {result.get('retCode')})")
+                
+            return result
+            
+        except requests.exceptions.Timeout:
+            self.logger.error("❌ Request timeout")
+            raise
+        except requests.exceptions.RequestException as e:
             self.logger.error(f"❌ API request failed: {e}")
             raise
-            
+        except Exception as e:
+            self.logger.error(f"❌ Unexpected error: {e}")
+            raise
+        
     def get_account_balance(self) -> Dict:
         """Get account balance and equity"""
         try:

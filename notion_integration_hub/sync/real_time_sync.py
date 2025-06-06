@@ -14,17 +14,26 @@ from datetime import datetime, timezone
 from typing import Dict, List, Any
 import sqlite3
 from live_trading_dashboard import LiveTradingDashboard
+import os
+import sys
+from pathlib import Path
 
-# Notion API Configuration
-NOTION_API_KEY = "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"
-NOTION_API_URL = "https://api.notion.com/v1"
-NOTION_VERSION = "2022-06-28"
-WORKING_DATABASE_ID = "207cba76-1065-80de-8321-e993dd0e8b34"
+# Add project root to path
+sys.path.append(str(Path(__file__).parent.parent.parent))
 
-headers = {
+# 🔐 SECURE CREDENTIAL LOADING
+# Load sensitive credentials from environment variables
+NOTION_API_KEY = os.getenv('NOTION_API_KEY')
+if not NOTION_API_KEY:
+    raise ValueError("❌ NOTION_API_KEY not found in environment variables. Please check .env file.")
+
+NOTION_DATABASE_ID = os.getenv('NOTION_DATABASE_ID', '6fb5e6d7fafb452790c9ba6e2b22feb6')
+
+# 🛡️ SECURE HEADERS WITH RATE LIMITING
+HEADERS = {
     "Authorization": f"Bearer {NOTION_API_KEY}",
     "Content-Type": "application/json",
-    "Notion-Version": NOTION_VERSION
+    "Notion-Version": "2022-06-28"
 }
 
 class LiveNotionTradingIntegration:
@@ -307,7 +316,7 @@ class LiveNotionTradingIntegration:
         """Create a new Notion page"""
         
         page_data = {
-            "parent": {"database_id": WORKING_DATABASE_ID},
+            "parent": {"database_id": NOTION_DATABASE_ID},
             "properties": {
                 "Name": {
                     "title": [{"type": "text", "text": {"content": f"{title} - {content[:100]}..."}}]
@@ -317,8 +326,8 @@ class LiveNotionTradingIntegration:
         
         try:
             response = requests.post(
-                f"{NOTION_API_URL}/pages",
-                headers=headers,
+                f"https://api.notion.com/v1/pages",
+                headers=HEADERS,
                 json=page_data
             )
             
@@ -351,7 +360,7 @@ class LiveNotionTradingIntegration:
                 await self.update_notion_with_live_data()
                 
                 print(f"✅ Notion database updated successfully")
-                print(f"🔗 View your live dashboard: https://www.notion.so/{WORKING_DATABASE_ID.replace('-', '')}")
+                print(f"🔗 View your live dashboard: https://www.notion.so/{NOTION_DATABASE_ID.replace('-', '')}")
                 print(f"⏳ Next update in 5 minutes...")
                 
                 # Wait 5 minutes between updates (adjust as needed)
