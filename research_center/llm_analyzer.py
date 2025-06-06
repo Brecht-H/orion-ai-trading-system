@@ -25,7 +25,6 @@ from typing import Dict, List, Any, Optional
 import logging
 from pathlib import Path
 import subprocess
-import aiohttp
 
 # Try to import ollama, provide instructions if not available
 try:
@@ -45,14 +44,15 @@ class ResearchIntelligence:
     def __init__(self):
         self.client = ollama.Client()
         self.setup_logging()
+        
+        # Learning memory - must be set before setup_database()
+        self.learning_db = "databases/sqlite_dbs/research_learnings.db"
+        
         self.setup_database()
         
         # Cost tracking
         self.daily_llm_calls = 0
         self.daily_cost = 0.0
-        
-        # Learning memory
-        self.learning_db = "databases/sqlite_dbs/research_learnings.db"
         
     def setup_logging(self):
         """Setup logging for intelligence tracking"""
@@ -100,10 +100,11 @@ class ResearchIntelligence:
     async def ensure_model_available(self, model: str = "mistral:7b"):
         """Ensure the required model is available locally"""
         try:
-            # Check if model exists
-            models = await self.client.list()
+            # Check if model exists - list() is not async
+            models = self.client.list()
             if not any(model in m['name'] for m in models.get('models', [])):
                 self.logger.info(f"📥 Downloading {model}... This may take a few minutes")
+                # pull() is async
                 await self.client.pull(model)
                 self.logger.info(f"✅ {model} ready for use")
         except Exception as e:

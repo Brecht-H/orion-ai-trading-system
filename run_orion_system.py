@@ -12,31 +12,34 @@ import subprocess
 import signal
 from pathlib import Path
 
-# Add workspace to path
-sys.path.insert(0, '/workspace')
+# Add current directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Color codes for terminal output
+# ANSI Color codes
 class Colors:
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
     GREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
+    BLUE = '\033[94m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    CYAN = '\033[96m'
     END = '\033[0m'
     BOLD = '\033[1m'
+    WARNING = '\033[93m'
 
 
 class OrionSystemRunner:
     """Main system runner with monitoring"""
     
     def __init__(self):
-        self.processes = {}
+        self.processes = []
+        self.event_bus = None
+        self.orchestrator = None
+        self.dashboard_process = None
         self.running = False
         
     def print_header(self):
         """Print system header"""
-        print(f"\n{Colors.HEADER}{Colors.BOLD}")
+        print(f"\n{Colors.CYAN}{Colors.BOLD}")
         print("=" * 60)
         print("🚀 ORION INTELLIGENT TRADING SYSTEM")
         print("=" * 60)
@@ -52,7 +55,10 @@ class OrionSystemRunner:
             'pandas': 'pandas',
             'numpy': 'numpy',
             'requests': 'requests',
-            'yfinance': 'yfinance'
+            'yfinance': 'yfinance',
+            'feedparser': 'feedparser',
+            'flask': 'flask',
+            'flask_cors': 'flask_cors'
         }
         
         missing = []
@@ -68,9 +74,11 @@ class OrionSystemRunner:
             print(f"\n{Colors.WARNING}⚠️  Missing dependencies: {', '.join(missing)}{Colors.END}")
             print(f"Installing missing packages...")
             
+            # Use system Python directly for installation
+            python_path = '/usr/bin/python3'
             for package in missing:
                 subprocess.run([
-                    sys.executable, '-m', 'pip', 'install', 
+                    python_path, '-m', 'pip', 'install', 
                     package, '--break-system-packages'
                 ], capture_output=True)
                 
@@ -114,7 +122,7 @@ class OrionSystemRunner:
                 subprocess.run(['ollama', 'pull', 'mistral:7b'])
                 
         except Exception as e:
-            print(f"{Colors.FAIL}❌ Ollama check failed: {e}{Colors.END}")
+            print(f"{Colors.RED}❌ Ollama check failed: {e}{Colors.END}")
             print("Please install Ollama from: https://ollama.ai")
             return False
             
@@ -128,7 +136,7 @@ class OrionSystemRunner:
         from core_orchestration.intelligent_orchestrator import IntelligentOrchestrator
         
         self.orchestrator = IntelligentOrchestrator()
-        self.running = True
+        self.running = True  # Set running to True when system starts
         
         # Start orchestrator
         print(f"{Colors.GREEN}✅ Starting Intelligent Orchestrator{Colors.END}")
