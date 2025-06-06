@@ -18,6 +18,15 @@ import yfinance as yf
 import feedparser
 import re
 
+# Import our intelligent analyzer
+import sys
+sys.path.append(str(Path(__file__).parent.parent))
+try:
+    from llm_analyzer import ResearchIntelligence
+except ImportError:
+    print("⚠️ ResearchIntelligence not available - running without intelligence")
+    ResearchIntelligence = None
+
 @dataclass
 class FreeDataSource:
     name: str
@@ -179,6 +188,73 @@ class FreeSourcesCollector:
         self.update_collection_stats("all_sources", total_records)
         
         print(f"✅ Free data collection complete: {total_records} records")
+        
+        # 🧠 INTELLIGENCE ANALYSIS - Analyze collected data for insights
+        if ResearchIntelligence:
+            try:
+                print("\n🧠 Starting intelligent analysis of collected data...")
+                analyzer = ResearchIntelligence()
+                
+                # Prepare data for analysis
+                analysis_data = {
+                    'prices': {},
+                    'sentiment': {},
+                    'indicators': {},
+                    'volumes': {}
+                }
+                
+                # Extract crypto prices
+                for price_record in results.get('crypto_prices', []):
+                    symbol = price_record.get('symbol', 'UNKNOWN')
+                    analysis_data['prices'][symbol] = {
+                        'price': price_record.get('price', price_record.get('price_usd', 0)),
+                        'change_24h': price_record.get('change_24h', 0),
+                        'volume_24h': price_record.get('volume_24h', 0)
+                    }
+                
+                # Extract sentiment data
+                if results.get('fear_greed'):
+                    analysis_data['sentiment']['fear_greed_index'] = results['fear_greed'].get('fear_greed_index', 50)
+                
+                # Extract Reddit sentiment
+                for reddit_data in results.get('reddit_sentiment', []):
+                    analysis_data['sentiment'][reddit_data['subreddit']] = reddit_data['avg_sentiment']
+                
+                # Extract traditional market indicators
+                for market_data in results.get('traditional_markets', []):
+                    if market_data['symbol'] == '^VIX':
+                        analysis_data['indicators']['vix'] = market_data['price']
+                    elif market_data['symbol'] == 'DX=F':
+                        analysis_data['indicators']['dxy'] = market_data['price']
+                
+                # Run intelligent analysis
+                analysis_result = await analyzer.analyze_market_data(analysis_data)
+                
+                if analysis_result['success']:
+                    print("\n📊 INTELLIGENCE INSIGHTS:")
+                    insights = analysis_result['analysis']
+                    print(f"   Market Sentiment: {insights.get('market_sentiment', 'unknown')}")
+                    print(f"   Confidence: {insights.get('confidence', 0):.2%}")
+                    print(f"   Key Insights:")
+                    for insight in insights.get('key_insights', [])[:3]:
+                        print(f"     • {insight}")
+                    print(f"   Recommended Focus: {insights.get('recommended_focus', 'continue monitoring')}")
+                    
+                    # Store analysis with results
+                    results['intelligence_analysis'] = analysis_result
+                    
+                    # Log for future learning
+                    print("\n💾 Analysis stored for future learning")
+                else:
+                    print(f"⚠️ Intelligence analysis failed: {analysis_result.get('error', 'Unknown error')}")
+                    
+            except Exception as e:
+                print(f"❌ Intelligence analysis error: {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print("⚠️ Running without intelligence analysis (ResearchIntelligence not available)")
+        
         return results
     
     async def collect_crypto_prices(self) -> List[Dict]:
