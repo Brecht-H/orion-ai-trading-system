@@ -124,4 +124,27 @@ reports/status_updates/
 !README.md
 !*.md
 !.cursor/mcp.json
-!.cursor/environment.json 
+!.cursor/environment.json
+
+# Copilot mess prevention
+*_copy.py
+*_backup.py
+*_old.py
+*_new.py
+*_v2.py
+*_test.py
+test_*.py
+example_*.py
+demo_*.py
+draft_*.py
+temp_*.py
+tmp_*.py
+
+# Prevent duplicate directories
+*/archived_*/
+*/backup_*/
+*/old_*/
+*/v2_*/
+
+# Prevent Copilot test files everywhere
+!/tests/test_*.py 
