@@ -1,0 +1,58 @@
+ORION AI TRADING SYSTEM - COPILOT RULES
+
+🚨 CRITICAL: This is a WORKING system. DO NOT break it!
+
+📍 ENVIRONMENT:
+- Location: /workspace (or ~/Orion_Project on Mac)
+- Python: ALWAYS use /usr/bin/python3 (NOT .venv)
+- Status: Check with 'ps aux | grep orion'
+
+✅ WORKING FILES (DO NOT MODIFY WITHOUT TESTING):
+- run_orion_system.py - Main system entry
+- simple_start.py - Clean starter script
+- fix_services.py - Fixes inactive services
+- .env - API credentials (NEVER commit)
+
+🎯 TO RUN THE SYSTEM:
+1. Simple way: /usr/bin/python3 simple_start.py
+2. Fix services: /usr/bin/python3 fix_services.py
+3. Direct way: /usr/bin/python3 run_orion_system.py
+
+❌ NEVER DO:
+- Create duplicate files (*_copy.py, *_backup.py)
+- Use virtual environment Python
+- Run pip install without --break-system-packages
+- Modify core architecture
+- Create new folders for same functionality
+- Break working code
+
+✅ ALWAYS DO:
+- Test changes before committing
+- Use existing module structure
+- Check if Ollama is running first
+- Monitor logs for errors
+- Keep root directory clean
+
+🔧 TROUBLESHOOTING:
+- Services 0/5: Run fix_services.py
+- Module errors: Use /usr/bin/python3
+- Ollama errors: ollama serve &
+- Check logs: tail -f logs/background_agent/agent.log
+
+📁 PROJECT STRUCTURE:
+/workspace/
+├── core_orchestration/     # System coordinator
+├── research_center/        # Data collection
+├── knowledge_center/       # AI processing
+├── strategy_center/        # Trading strategies
+├── risk_management_center/ # Risk controls
+├── dashboard/              # Web interface
+├── databases/              # SQLite storage
+├── logs/                   # System logs
+└── Crypto_ai_tool/        # Archived old files
+
+💡 IF CONFUSED:
+1. Stop and check what's running: ps aux | grep python
+2. Read CLEAN_ORION_SETUP.md
+3. Use simple_start.py instead of complex commands
+4. When in doubt, don't modify - ask first!
