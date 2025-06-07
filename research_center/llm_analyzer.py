@@ -102,14 +102,32 @@ class ResearchIntelligence:
         try:
             # Check if model exists - list() is not async
             models = self.client.list()
-            if not any(model in m['name'] for m in models.get('models', [])):
-                self.logger.info(f"📥 Downloading {model}... This may take a few minutes")
-                # pull() is async
-                await self.client.pull(model)
-                self.logger.info(f"✅ {model} ready for use")
+            
+            # Handle different response formats from ollama
+            model_names = []
+            if isinstance(models, dict) and 'models' in models:
+                # Format: {'models': [{'name': 'model:tag', ...}, ...]}
+                model_names = [m.get('name', '') for m in models.get('models', []) if 'name' in m]
+            elif isinstance(models, list):
+                # Format: [{'name': 'model:tag', ...}, ...]
+                model_names = [m.get('name', '') for m in models if isinstance(m, dict) and 'name' in m]
+            
+            # Check if our model is available
+            model_available = any(model in name for name in model_names)
+            
+            if not model_available:
+                self.logger.info(f"📥 Model {model} not found locally. Downloading...")
+                # Use subprocess to pull the model
+                try:
+                    subprocess.run(['ollama', 'pull', model], check=True)
+                    self.logger.info(f"✅ {model} downloaded successfully")
+                except subprocess.CalledProcessError as e:
+                    self.logger.error(f"❌ Failed to download {model}: {e}")
+                    raise
         except Exception as e:
             self.logger.error(f"❌ Error checking/downloading model: {e}")
-            raise
+            # Don't raise - allow system to continue with fallback
+            self.logger.warning("⚠️ Continuing without model verification")
             
     async def analyze_market_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
