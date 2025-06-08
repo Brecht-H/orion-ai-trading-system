@@ -1,0 +1,20 @@
+COPY THIS TO COPILOT ON YOUR MAC:
+
+===== MESSAGE TO COPILOT =====
+
+Create these 2 files in ~/Orion_Project:
+
+FILE 1: start_orion.py
+#!/usr/bin/env python3
+import subprocess
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+subprocess.run(["/usr/bin/python3", "run_orion_system.py"])
+
+FILE 2: SIMPLE_RULES.txt
+TO RUN: python3 start_orion.py
+TO STOP: Ctrl+C  
+IF PACKAGE ERROR: pip3 install pandas numpy ollama chromadb yfinance flask flask-cors
+THAT'S IT!
+
+===== END MESSAGE ===== 
